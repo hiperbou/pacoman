@@ -291,7 +291,8 @@ class GameScene() : SceneBase() {
             while (tiempofruta>0) {
                 tiempofruta--;      // Decrementa tiempo de fruta
                 // Fruta comida
-                if (collision<paco>()!=null) { //TODO
+                val col = get_id<paco>().filter { (abs(x - it.x) <= 10 && abs(y - it.y) <= 10)  }.firstOrNull()
+                if (col!=null) {
                     sound(s_come_fruta, 512, 256);        // Hace el sonido
                     tiempofruta = -20;                    // Pone otra pausa
                     currentGameState.puntuacion += valor_frutas[currentGameState.nivel];    // Suma puntuación
@@ -369,15 +370,14 @@ class GameScene() : SceneBase() {
         return "${rgba.r},${rgba.g},${rgba.b}"
     }
 
+    val mapMap = mutableMapOf<Int, Bitmap>()
     fun map_get_pixel(graph:Int, x:Number, y:Number):String {
-        return map_get_pixel(getImage(graph).extract(), x, y)
+        return map_get_pixel(mapMap.getOrPut(graph) { getImage(graph).extract() }, x, y)
     }
 
 
-
-
     fun map_put(dest:Bitmap32, graph:Int, x:Number, y:Number) {
-        val src = getImage(graph).extract()
+        val src = mapMap.getOrPut(graph) { getImage(graph).extract() }
         dest.lock {
             src.copy(0,0, dest, x.toInt() - src.width/2, y.toInt() - src.height/2, src.width, src.height)
             //TODO:
@@ -555,7 +555,8 @@ class GameScene() : SceneBase() {
                     frame();  // Muestra los gráficos
                     imagen = 0;
                     // Comprueba si ha colisionado con un fantasma
-                    comido = collision<fantasma>()
+                    //comido = collision<fantasma>()
+                    comido = get_id<fantasma>().filter { (abs(x - it.x) <= 10 && abs(y - it.y) <= 10)  }.firstOrNull()
                     if (comido!=null) {
 
                         // Mira si realmente el fantasma esta cerca
