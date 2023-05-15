@@ -1,15 +1,18 @@
 package scenes
 
-import com.soywiz.kmem.umod
-import com.soywiz.korau.sound.NativeSoundChannel
-import com.soywiz.korge.view.*
-import com.soywiz.korim.bitmap.Bitmap
-import com.soywiz.korim.bitmap.Bitmap32
-import com.soywiz.korim.bitmap.extract
-import com.soywiz.korim.color.Colors
+import korlibs.memory.umod
+import korlibs.audio.sound.SoundChannel
+import korlibs.korge.view.*
+import korlibs.image.bitmap.Bitmap
+import korlibs.image.bitmap.Bitmap32
+import korlibs.image.bitmap.extract
+import korlibs.image.color.Colors
 import extensions.toBool
 import gameplay.*
 import input.*
+import korlibs.korge.view.align.alignLeftToLeftOf
+import korlibs.korge.view.align.centerOnStage
+import korlibs.korge.view.align.centerXOnStage
 import resources.Resources
 import resources.Resources.Companion.s_come_fantasma
 import resources.Resources.Companion.s_come_fruta
@@ -24,7 +27,7 @@ class GameScene() : SceneBase() {
 
     lateinit var pointsText : Text
     lateinit var levelText : Text
-    lateinit var canal_s_inicio:NativeSoundChannel
+    lateinit var canal_s_inicio:SoundChannel
 
     val backgroundMap = Bitmap32(640,480)
 
@@ -33,7 +36,7 @@ class GameScene() : SceneBase() {
     val inteligencia = arrayOf(0,10,30,50,65,75,85,90,95,100,100)
 
 
-    override suspend fun Container.sceneInit() {
+    override suspend fun SContainer.sceneInit() {
         Resources(views).loadAll()
         program()
     }
@@ -47,8 +50,8 @@ class GameScene() : SceneBase() {
 
     val textList = mutableListOf<Text>()
 
-    val textSize = 32.0
-    fun Container.write(x:Int, y:Int, c:Int, str:String, size:Double = textSize)= text(str, size, font = Resources.font).apply {
+    val textSize = 32f
+    fun Container.write(x:Int, y:Int, c:Int, str:String, size:Float = textSize)= text(str, size, font = Resources.font).apply {
         position(x,y)
         textList.add(this)
     }
@@ -108,7 +111,7 @@ class GameScene() : SceneBase() {
                 titulo(write(320,320,1,"Pulsa una tecla para jugar").centerXOnStage())
                 write(320,80,1,"Record").centerXOnStage()
                 write_int(320,110,1, puntuacion_max).centerXOnStage()
-                write(320,430,1,"(c) 96 Daniel Navarro - DIV Game Studio",28.0).centerXOnStage()
+                write(320,430,1,"(c) 96 Daniel Navarro - DIV Game Studio",28f).centerXOnStage()
 
                 fantasma(320,177,12).apply {
                     flags = flags or 4   // Lo hace transparente
@@ -252,7 +255,7 @@ class GameScene() : SceneBase() {
 
     inner class parpadeante(val xx: Number, val yy: Number) : Process(sceneView) {
         override suspend fun main() {
-            position(xx, yy)
+            position(xx.toFloat(), yy.toFloat())
 
             loop {
                 graph=10   // Imprime el gráfico
@@ -265,7 +268,7 @@ class GameScene() : SceneBase() {
 
     inner class vida(val xx: Number) : Process(sceneView) {
         override suspend fun main() {
-            position(xx, 14) // Elige la coordenada vertical
+            position(xx.toFloat(), 14f) // Elige la coordenada vertical
             graph=4    // Selecciona gráfico
             loop {
                 frame()
@@ -327,7 +330,7 @@ class GameScene() : SceneBase() {
                 // Imprímelo fuera de pantalla lo que hace al texto intermitente
                 if (contador0==7) txt.position(txt.x.toInt(),640)
                 // Mueve el titulo
-                y = tabla_grafico[contador0].toDouble()    // Mueve el titulo
+                y = tabla_grafico[contador0].toFloat()    // Mueve el titulo
 
                 frame()
             }
@@ -402,12 +405,12 @@ class GameScene() : SceneBase() {
 
         var imagen = 0  // Numero de gráfico
         override suspend fun main() {
-            position(xx, yy) // Elige la coordenada vertical
+            position(xx.toFloat(), yy.toFloat()) // Elige la coordenada vertical
 
             loop {
                 // Comprueba los lados de la pantalla
-                if (x<105) x=105.0
-                if (x>554) x=554.0
+                if (x<105) x=105f
+                if (x>554) x=554f
 
                 // Selecciona la dirección y el gráfico de acuerdo al color del mapa de caminos
                 when (map_get_pixel(33,(x-105)/2,(y-1)/2)) {
@@ -706,11 +709,11 @@ class GameScene() : SceneBase() {
         
         
         override suspend fun main() {
-            position(xx, yy) // Elige la coordenada vertical
+            position(xx.toFloat(), yy.toFloat()) // Elige la coordenada vertical
             graph=modelo    // Selecciona gráfico
             loop {
                 // Si el fantasma esta en casa entonces da más imagenes
-                if (color(x,y)=="84,252,252" || estado>0){
+                if (color(x.toDouble(),y.toDouble())=="84,252,252" || estado>0){
                     num_imagenes=1;
                 }else{
                     num_imagenes=2;
