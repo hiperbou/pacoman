@@ -1,26 +1,25 @@
 package gameplay
 
 
-import com.soywiz.klock.Frequency
-import com.soywiz.kmem.setBits
-import com.soywiz.kmem.unsetBits
-import com.soywiz.korau.sound.NativeSound
-import com.soywiz.korau.sound.NativeSoundChannel
-import com.soywiz.korge.component.StageComponent
-import com.soywiz.korge.component.registerStageComponent
-import com.soywiz.korge.input.onKeyDown
-import com.soywiz.korge.input.onKeyUp
-import com.soywiz.korge.scene.Scene
-import com.soywiz.korge.view.*
-import com.soywiz.korim.bitmap.Bitmap32
-import com.soywiz.korim.bitmap.BmpSlice
-import com.soywiz.korim.bitmap.slice
-import com.soywiz.korio.async.*
-import com.soywiz.korma.geom.Angle
-import com.soywiz.korma.geom.cos
-import com.soywiz.korma.geom.sin
 import extensions.toBool
 import input.getButtonPressed
+import korlibs.audio.sound.*
+import korlibs.image.bitmap.*
+import korlibs.image.color.RGBA
+import korlibs.io.async.*
+import korlibs.korge.component.onAttachDetach
+import korlibs.korge.component.registerStageComponent
+import korlibs.korge.input.keys
+import korlibs.korge.render.RenderContext
+import korlibs.korge.render.TexturedVertexArray
+import korlibs.korge.scene.Scene
+import korlibs.korge.view.*
+import korlibs.korge.view.collision.CollisionKind
+import korlibs.korge.view.collision.findCollision
+import korlibs.math.geom.*
+import korlibs.memory.setBits
+import korlibs.memory.unsetBits
+import korlibs.time.Frequency
 import kotlinx.coroutines.*
 import resources.Resources
 import kotlin.random.Random
@@ -74,7 +73,7 @@ abstract class SceneBase:Scene()
         }
 
         frameReady.waitOneBase()
-        while(speed == 0.0) {
+        while(speed == 0f) {
             frameReady.waitOneBase()
         }
     }
@@ -121,8 +120,46 @@ abstract class SceneBase:Scene()
     }
 }
 
+class ImageData {
+    val vertices = TexturedVertexArray(4, TexturedVertexArray.QUAD_INDICES)
+    var baseBitmap: BitmapCoords = Bitmaps.white
+    var anchor: Anchor = Anchor.TOP_LEFT
+    val sLeft: Float get() = -anchorDispX
+    val sTop: Float get() = -anchorDispY
+    val sRight: Float get() = sLeft + bwidth
+    val sBottom: Float get() = sTop + bheight
+    val bwidth: Float get() = baseBitmap.width.toFloat()
+    val bheight: Float get() = baseBitmap.height.toFloat()
+    val frameOffsetX: Float get() = baseBitmap.frameOffsetX.toFloat()
+    val frameOffsetY: Float get() = baseBitmap.frameOffsetY.toFloat()
+    val frameWidth: Float get() = baseBitmap.frameWidth.toFloat()
+    val frameHeight: Float get() = baseBitmap.frameHeight.toFloat()
+    val anchorDispXNoOffset: Float get() = (anchor.sx * frameWidth)
+    val anchorDispYNoOffset: Float get() = (anchor.sy * frameHeight)
+    val anchorDispX: Float get() = (anchorDispXNoOffset - frameOffsetX)
+    val anchorDispY: Float get() = (anchorDispYNoOffset - frameOffsetY)
+    var smoothing: Boolean = true
+    var renderBlendMode: BlendMode = BlendMode.NORMAL
 
-abstract class Process(parent: Container) : Image(emptyImage) {
+    fun drawVertices(ctx: RenderContext) {
+        ctx.useBatcher { batch ->
+            //batch.texture1212
+            //batch.setTemporalUniforms(_programUniforms) {
+            batch.drawVertices(
+                vertices, ctx.getTex(baseBitmap).base, smoothing, renderBlendMode,
+            )
+            //}
+        }
+    }
+
+    fun computeVertices(globalMatrix: Matrix, renderColorMul: RGBA) {
+        vertices.quad(0, sLeft, sTop, bwidth, bheight, globalMatrix, baseBitmap, renderColorMul)
+    }
+
+}
+
+//abstract class Process(parent: Container) : Image(emptyImage) {
+abstract class Process(parent: Container) : Container(), Anchorable {
     companion object {
         val emptyImage = Bitmap32(1,1)
 
@@ -132,12 +169,17 @@ abstract class Process(parent: Container) : Image(emptyImage) {
     open val pname:String
         get() = this::class.simpleName ?: "process"
 
+    private val imageData = ImageData()
+    override var anchor: Anchor by imageData::anchor
+    var bitmap: BitmapCoords by imageData::baseBitmap
+    var smoothing: Boolean by imageData::smoothing
+
     private var _graph = 0
     var graph:Int
         get() =  _graph
         set(value) {
             _graph = value
-            texture = getImage(value)
+            bitmap = getImage(value)
         }
 
     private var _angle = 0.0
@@ -145,8 +187,14 @@ abstract class Process(parent: Container) : Image(emptyImage) {
         get() =  _angle
         set(value) {
             _angle = value
-            rotationRadians = -value
+            rotation = -value.radians
         }
+
+    override fun renderInternal(ctx: RenderContext) {
+        imageData.computeVertices(globalMatrix, renderColorMul)
+        imageData.drawVertices(ctx)
+        super.renderInternal(ctx)
+    }
 
     private var _flags = 0
     var flags:Int
@@ -154,24 +202,22 @@ abstract class Process(parent: Container) : Image(emptyImage) {
         set(value){
             _flags = value
             when(value){
-                0 -> { scale(1,1) ; alpha=1.0 }
-                1 -> { scale(-1,1); alpha=1.0 }
-                2 -> { scale(1,-1); alpha=1.0 }
-                3 -> { scale(-1,-1); alpha=1.0 }
-                4 -> { scale(1,1); alpha=0.5 }
-                5 -> { scale(-1,1); alpha=0.5 }
-                6 -> { scale(1,-1); alpha=0.5 }
-                7 -> { scale(-1,-1); alpha=0.5 }
+                0 -> { scale(1,1) ; alpha=1.0f }
+                1 -> { scale(-1,1); alpha=1.0f }
+                2 -> { scale(1,-1); alpha=1.0f }
+                3 -> { scale(-1,-1); alpha=1.0f }
+                4 -> { scale(1,1); alpha=0.5f }
+                5 -> { scale(-1,1); alpha=0.5f }
+                6 -> { scale(1,-1); alpha=0.5f }
+                7 -> { scale(-1,-1); alpha=0.5f }
             }
         }
 
     init {
         lateinit var job: Job
 
-        addComponent(object : StageComponent {
-            override val view: View = this@Process
-
-            override fun added(views: Views) {
+        onAttachDetach(
+            onAttach = {
                 job = launchAsap {
                     //main()
                     //removeFromParent()
@@ -187,13 +233,12 @@ abstract class Process(parent: Container) : Image(emptyImage) {
                         }
                     }
                 }
-            }
-
-            override fun removed(views: Views) {
+            },
+            onDetach = {
                 job.cancel()
                 list.remove(this@Process)
             }
-        })
+        )
 
         parent.addChild(this)
         anchor(0.5, 0.5)
@@ -213,11 +258,11 @@ abstract class Process(parent: Container) : Image(emptyImage) {
     }
 
     fun freeze() {
-        speed = 0.0
+        speed = 0.0f
     }
 
     fun wakeup() {
-        speed = 1.0
+        speed = 1.0f
     }
 
     class ChangeActionException(val action: KSuspendFunction0<Unit>) : Exception()
@@ -229,8 +274,10 @@ abstract class Process(parent: Container) : Image(emptyImage) {
     fun key(k:Int):Boolean {
         if (!keyListener) {
             keyListener = true
-            onKeyDown { key = key.setBits(getButtonPressed(it)) }
-            onKeyUp { key = key.unsetBits(getButtonPressed(it)) }
+            keys {
+                down { key = key.setBits(getButtonPressed(it)) }
+                up { key = key.unsetBits(getButtonPressed(it)) }
+            }
         }
         return (key and k).toBool()
     }
@@ -249,7 +296,7 @@ abstract class Process(parent: Container) : Image(emptyImage) {
 
 
 fun Views.registerProcessSystem() {
-    registerStageComponent()
+    registerStageComponent(stage)
 }
 
 
@@ -264,11 +311,11 @@ fun Scene.loop(block:suspend ()->Unit){
 
 
 private val mute = false
-fun Container.sound(nativeSound: NativeSound, a:Int, b:Int):NativeSoundChannel {
+fun Container.sound(nativeSound: Sound, a:Int, b:Int): SoundChannel {
     //if(mute) return
-    return nativeSound.play()
+    return nativeSound.playNoCancel(1.playbackTimes)
 }
 
-fun Container.stop_sound(channel:NativeSoundChannel){
+fun Container.stop_sound(channel:SoundChannel){
     channel.stop()
 }

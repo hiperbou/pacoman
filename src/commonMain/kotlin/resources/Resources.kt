@@ -1,14 +1,13 @@
 package resources
 
-import com.soywiz.korau.sound.NativeSound
-import com.soywiz.korau.sound.readSound
-import com.soywiz.korge.atlas.Atlas
-import com.soywiz.korge.atlas.readAtlas
-import com.soywiz.korge.view.Views
-import com.soywiz.korim.font.BitmapFont
-import com.soywiz.korim.font.readBitmapFont
-
-import com.soywiz.korio.file.std.resourcesVfs
+import korlibs.audio.sound.Sound
+import korlibs.audio.sound.readSound
+import korlibs.image.atlas.Atlas
+import korlibs.image.atlas.readAtlas
+import korlibs.image.font.BitmapFont
+import korlibs.image.font.readBitmapFont
+import korlibs.io.file.std.resourcesVfs
+import korlibs.korge.view.Views
 import kotlin.native.concurrent.*
 
 class Resources(private val views: Views) {
@@ -17,13 +16,13 @@ class Resources(private val views: Views) {
         lateinit var atlas: Atlas
 
         lateinit var font: BitmapFont
-        lateinit var s_come_fantasma: NativeSound
-        lateinit var s_come_fruta: NativeSound
-        lateinit var s_come_punto: NativeSound
-        lateinit var s_come_puntogr: NativeSound
-        lateinit var s_empieza: NativeSound
-        lateinit var s_muerte: NativeSound
-        lateinit var s_inicio: NativeSound
+        lateinit var s_come_fantasma: Sound
+        lateinit var s_come_fruta: Sound
+        lateinit var s_come_punto: Sound
+        lateinit var s_come_puntogr: Sound
+        lateinit var s_empieza: Sound
+        lateinit var s_muerte: Sound
+        lateinit var s_inicio: Sound
 
         private var loaded = false
         private var loadedGfx = false
@@ -42,7 +41,7 @@ class Resources(private val views: Views) {
         if(loadedGfx) return
         loadedGfx = true
 
-        atlas = resourcesVfs["fpg.atlas.json"].readAtlas(views)
+        atlas = resourcesVfs["fpg.atlas.json"].readAtlas()
         font = resourcesVfs["texts/I-pixel-u.fnt"].readBitmapFont()
 
         s_come_fantasma = resourcesVfs["comefant.wav"].readSound()

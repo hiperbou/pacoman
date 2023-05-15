@@ -1,9 +1,12 @@
 /.gradle
 /.idea
 /build
+/local.properties
 *.iml
 *.hprof
 *.log
 korge.keystore
 local.properties
 src/main/*
+/deps
+/modules
